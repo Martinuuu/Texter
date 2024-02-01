@@ -3,8 +3,7 @@ import java.util.ArrayList;
 
 public class Database {
 
-    int nextMessage;
-
+    int messagesLoaded;
     ArrayList<Message> messages;
     Connection con;
     Statement stmt;
@@ -12,7 +11,7 @@ public class Database {
 
     Database() {
         messages = new ArrayList<Message>();
-        nextMessage = 0;
+        messagesLoaded = 0;
     }
 
     public void connect() {
@@ -28,14 +27,20 @@ public class Database {
 
     public void getMessages() {
         try {
-            int i = messages.size();
-            while(chatRS.absolute(i)) {
+            chatRS = stmt.executeQuery("select * from chat");
+            chatRS.next();
+            while(!chatRS.isAfterLast()){
                 messages.add(new Message(chatRS.getTimestamp("time"), chatRS.getString("username"), chatRS.getString("content")));
+                chatRS.next();
             }
-        } catch (Exception e) {
-            System.out.println(e);
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
+
     }
+
+
 
     public void sendMessage(Message message) throws SQLException {
         String sql = "INSERT INTO chat VALUES (?, ?, ?)";

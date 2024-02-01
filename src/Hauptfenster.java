@@ -16,7 +16,9 @@ public class Hauptfenster extends JFrame implements ActionListener {
     JTextField text;
     static Database db = new Database();
 
+
     public Hauptfenster() {
+
         db.connect();
 
         this.setSize(854, 480);
@@ -33,6 +35,11 @@ public class Hauptfenster extends JFrame implements ActionListener {
         scrollPane = new JScrollPane();
         scrollPane.setViewportView(messageList);
         messageList.setLayoutOrientation(JList.VERTICAL);
+        scrollPane.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
+            public void adjustmentValueChanged(AdjustmentEvent e) {
+                e.getAdjustable().setValue(e.getAdjustable().getMaximum());
+            }
+        });
 
         refreshList();
 
@@ -57,13 +64,12 @@ public class Hauptfenster extends JFrame implements ActionListener {
 
 
     void refreshList() {
-        // Get messages from the database and add them to the model
+        model.clear();
         db.getMessages();
-        for (int i = model.size() + 1; i < db.messages.size(); i++) {
+        for(int i = db.messagesLoaded; i <= db.messages.size() - 1; i++) {
             model.addElement(db.messages.get(i).timestamp + " - " + db.messages.get(i).username + ": " + db.messages.get(i).content);
-
+            db.messagesLoaded++;
         }
-        System.out.println(model.getSize());
     }
 
     // Call your function here
