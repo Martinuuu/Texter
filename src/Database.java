@@ -8,10 +8,12 @@ public class Database {
     Connection con;
     Statement stmt;
     ResultSet chatRS;
+    Timestamp prevMsg;
 
     Database() {
         messages = new ArrayList<Message>();
         messagesLoaded = 0;
+        prevMsg = new Timestamp(0);
     }
 
     public void connect() {
@@ -25,24 +27,44 @@ public class Database {
         }
     }
 
-    public void getMessages() {
+    public void getMessages(String table) {
         try {
             chatRS = stmt.executeQuery("select * from chat");
             chatRS.next();
-            while(!chatRS.isAfterLast()){
+            while (!chatRS.isAfterLast()) {
                 messages.add(new Message(chatRS.getTimestamp("time"), chatRS.getString("username"), chatRS.getString("content")));
                 chatRS.next();
             }
 
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            // Print out the SQLState for debugging
+
+            // Check if the SQLState indicates an empty result set error
+            if ("S1000".equals(e.getSQLState())) {
+                // Handle the specific error here
+                messages.add(new Message(new Timestamp(0),"","No Messages here. Be the first to chat!"));
+            } else {
+                // Handle other SQLExceptions
+                System.out.println(e);
+            }
+
         }
 
     }
 
+    boolean checkNewMessage() {
+        try {
+            chatRS = stmt.executeQuery("SELECT * FROM chat ORDER BY time DESC LIMIT 1;");
+            Timestamp lastMsg = chatRS.getTimestamp("time");
+            return lastMsg.after(prevMsg);
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
 
-    public void sendMessage(Message message) throws SQLException {
+    public void sendMessage(Message message) {
         String sql = "INSERT INTO chat VALUES (?, ?, ?)";
 
         try (
