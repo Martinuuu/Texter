@@ -28,26 +28,26 @@ public class Database {
     }
 
     public void getMessages(String table) {
+
+        System.out.println("refreshed Messages");
         try {
             chatRS = stmt.executeQuery("select * from chat");
             chatRS.next();
             while (!chatRS.isAfterLast()) {
-                messages.add(new Message(chatRS.getTimestamp("time"), chatRS.getString("username"), chatRS.getString("content")));
+                messages.add(new Message(chatRS.getTimestamp("time"), chatRS.getString("username"), chatRS.getString("content"), false));
                 chatRS.next();
             }
 
         } catch (SQLException e) {
-            // Print out the SQLState for debugging
 
             // Check if the SQLState indicates an empty result set error
-            if ("S1000".equals(e.getSQLState())) {
+            if("S1000".equals(e.getSQLState())) {
                 // Handle the specific error here
-                messages.add(new Message(new Timestamp(0),"","No Messages here. Be the first to chat!"));
+                messages.add(new Message(new Timestamp(0), "", "No Messages here. Be the first to chat!", false));
             } else {
                 // Handle other SQLExceptions
                 System.out.println(e);
             }
-
         }
 
     }
@@ -55,8 +55,14 @@ public class Database {
     boolean checkNewMessage() {
         try {
             chatRS = stmt.executeQuery("SELECT * FROM chat ORDER BY time DESC LIMIT 1;");
+            chatRS.next();
             Timestamp lastMsg = chatRS.getTimestamp("time");
-            return lastMsg.after(prevMsg);
+            boolean isBefore = lastMsg.after(prevMsg);
+            if(isBefore) {
+                prevMsg = lastMsg;
+                return true;
+            }
+            return false;
 
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -67,9 +73,7 @@ public class Database {
     public void sendMessage(Message message) {
         String sql = "INSERT INTO chat VALUES (?, ?, ?)";
 
-        try (
-                // Create a PreparedStatement with the SQL query
-                PreparedStatement preparedStatement = con.prepareStatement(sql)) {
+        try (PreparedStatement preparedStatement = con.prepareStatement(sql)) {
             // Set values for the parameters in the SQL query
             preparedStatement.setTimestamp(1, message.timestamp);
             preparedStatement.setString(2, message.username);
