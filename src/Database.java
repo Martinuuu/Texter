@@ -1,5 +1,6 @@
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Objects;
 
 public class Database {
 
@@ -25,6 +26,60 @@ public class Database {
         } catch (Exception e) {
             System.out.println(e);
         }
+    }
+
+    public boolean login(String username, String password) {
+        System.out.println("logging in");
+        try {
+            chatRS = stmt.executeQuery("select * from user");
+            chatRS.next();
+            while(!chatRS.isAfterLast()) {
+                String dbUsername = chatRS.getString(1);
+                String dbPassword = chatRS.getString(2);
+                if(Objects.equals(username, dbUsername) && Objects.equals(password, dbPassword)) return true;
+                chatRS.next();
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Login Fehler");
+        }
+        return false;
+    }
+
+    public boolean register(String username, String password) {
+        String sql = "INSERT INTO user VALUES (?, ?, ?)";
+        try {
+            chatRS = stmt.executeQuery("select * from user");
+            chatRS.next();
+            while(!chatRS.isAfterLast()) {
+                if(username == chatRS.getString(1)) return false;
+                System.out.println(chatRS.getString(1));
+                chatRS.next();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        try (PreparedStatement preparedStatement = con.prepareStatement(sql)) {
+            // Set values for the parameters in the SQL query
+            preparedStatement.setString(1, username);
+            preparedStatement.setString(2, password);
+            preparedStatement.setString(3, "fffff");
+
+            // Execute the query
+            int rowsAffected = preparedStatement.executeUpdate();
+
+            if(rowsAffected > 0) {
+                System.out.println("Insert successful. Rows affected: " + rowsAffected);
+            } else {
+                System.out.println("Insert failed.");
+            }
+            return true;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     public void getMessages(String table) {

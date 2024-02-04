@@ -11,7 +11,8 @@ import java.sql.Timestamp;
 
 public class Hauptfenster extends JFrame implements ActionListener {
     static Database db = new Database();
-    JPanel userPanel;
+
+    JButton loginButton;
     JPanel sendPanel;
     JPanel buttonPanel;
     JLabel anzeige;     // Anzeigeflaeche
@@ -24,8 +25,18 @@ public class Hauptfenster extends JFrame implements ActionListener {
 
     JPanel mainPanel;
     JPanel loginPanel;
+    JPanel registerPanel;
     CardLayout cardLayout;
     JButton login;
+    JPanel startPanel;
+    JTextField usernameField;
+    JTextField passwordField;
+
+    JTextField registerusernameField;
+    JTextField registerpasswordField;
+    JButton registerButton;
+    JTabbedPane tabpane;
+    User usr;
 
 
     public Hauptfenster() {
@@ -57,26 +68,78 @@ public class Hauptfenster extends JFrame implements ActionListener {
 
 
     private void createLoginPanel() {
+        startPanel = new JPanel();
+        tabpane = new JTabbedPane
+                (JTabbedPane.TOP,JTabbedPane.SCROLL_TAB_LAYOUT );
+
+        startPanel.setLayout(new BorderLayout());
+
         loginPanel = new JPanel();
-        // Add components for login (text fields, buttons, etc.) to the loginPanel
-        // Example:
-        JTextField usernameField = new JTextField();
-        JButton loginButton = new JButton("Login");
-        loginPanel.add(usernameField);
+        startPanel.setLayout(new FlowLayout());
+        loginPanel.setLayout(new BoxLayout(loginPanel, BoxLayout.Y_AXIS));
+        JPanel userPanel = new JPanel();
+        userPanel.setLayout(new BoxLayout(userPanel, BoxLayout.X_AXIS));
+        JPanel passwordPanel = new JPanel();
+        passwordPanel.setLayout(new BoxLayout(passwordPanel, BoxLayout.X_AXIS));
+        registerPanel = new JPanel();
+        registerPanel.setLayout(new BoxLayout(registerPanel,BoxLayout.Y_AXIS));
+
+        JLabel loginuserLabel = new JLabel("Benutzername: ");
+        JLabel loginpasswordLabel = new JLabel("Passwort: ");
+
+        JLabel registeruserLabel = new JLabel("Benutzername: ");
+        JLabel registerpasswordLabel = new JLabel("Passwort: ");
+        registerusernameField = new JTextField();
+        registerpasswordField = new JTextField();
+
+        JPanel registeruserPanel = new JPanel();
+        registeruserPanel.setLayout(new BoxLayout(registeruserPanel, BoxLayout.X_AXIS));
+
+        JPanel registerpassPanel = new JPanel();
+        registerpassPanel.setLayout(new BoxLayout(registerpassPanel, BoxLayout.X_AXIS));
+
+        registerButton = new JButton("Register");
+        registerButton.addActionListener(this);
+
+        registeruserPanel.add(registeruserLabel);
+        registeruserPanel.add(registerusernameField);
+
+        registerpassPanel.add(registerpasswordLabel);
+        registerpassPanel.add(registerpasswordField);
+
+        registerPanel.add(registeruserPanel);
+        registerPanel.add(registerpassPanel);
+
+        usernameField = new JTextField();
+        passwordField = new JTextField();
+        loginButton = new JButton("Login");
+        tabpane.addTab("Login", loginPanel);
+        tabpane.addTab("Register", registerPanel);
+
+        startPanel.add(tabpane, BorderLayout.CENTER);
+
+
+        userPanel.add(loginuserLabel);
+        userPanel.add(usernameField);
+
+        passwordPanel.add(loginpasswordLabel);
+        passwordPanel.add(passwordField);
+
+        loginPanel.add(userPanel);
+        loginPanel.add(passwordPanel);
+
         loginPanel.add(loginButton);
+
         loginButton.addActionListener(this);
+
+
+        JLabel disclamer = new JLabel();
+        disclamer.setText("<html><p style=\"width:100px\">"+"Achtung! Passwörter werden im Klartext in einer von Administratoren einsehbaren Datenbank abgespeichert! Bitte benutzt keine Passwörter die schon in benutzung sind oder private Informationen beinhalten."+"</p></html>");
+        registerPanel.add(registerButton);
+        registerPanel.add(disclamer);
     }
 
-    private void createMainPanel() {
-        mainPanel = new JPanel();
-        cardLayout = new CardLayout();
-        mainPanel.setLayout(cardLayout);
 
-        mainPanel.add("chat", createChatPanel());  // "chat" is the identifier for the main chat page
-        mainPanel.add("login", loginPanel);        // "login" is the identifier for the login page
-
-        add(mainPanel);
-    }
 
     private JPanel createChatPanel() {
         JPanel chatPanel = new JPanel();
@@ -139,6 +202,17 @@ public class Hauptfenster extends JFrame implements ActionListener {
         return chatPanel;
     }
 
+    private void createMainPanel() {
+        mainPanel = new JPanel();
+        cardLayout = new CardLayout();
+        mainPanel.setLayout(cardLayout);
+
+        mainPanel.add("chat", createChatPanel());  // "chat" is the identifier for the main chat page
+        mainPanel.add("login", startPanel);        // "login" is the identifier for the login page
+
+        add(mainPanel);
+    }
+
     void refreshList() {
         if(db.checkNewMessage()) {
             model.clear();
@@ -153,13 +227,23 @@ public class Hauptfenster extends JFrame implements ActionListener {
 
     public void actionPerformed(ActionEvent origin) {
         if(origin.getSource() == this.sendButton) {
-            db.sendMessage(new Message(new Timestamp(System.currentTimeMillis()), "Martinuuu", text.getText(), false));
+            db.sendMessage(new Message(new Timestamp(System.currentTimeMillis()), usr.username, text.getText(), false));
             text.setText("");
             refreshList();
         } else if(origin.getSource() == this.login) {
             cardLayout.show(mainPanel, "login");
-        } else if(origin.getSource() == this.login) {
-            cardLayout.show(mainPanel, "login");
+        } else if(origin.getSource() == this.loginButton) {
+            if(db.login(usernameField.getText(),passwordField.getText())) {
+                usr = new User(usernameField.getText());
+                usernameField.setText(""); passwordField.setText("");
+                cardLayout.show(mainPanel,"chat");
+            }
+        } else if(origin.getSource() == this.registerButton) {
+            if(registerusernameField.getText().isEmpty() || registerpasswordField.getText().isEmpty()) return;
+            if(db.register(registerusernameField.getText(),registerpasswordField.getText())) {
+                registerusernameField.setText(""); registerpasswordField.setText("");
+                tabpane.setSelectedIndex(0);
+            }
         }
     }
 
