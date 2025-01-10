@@ -1,45 +1,63 @@
 import com.formdev.flatlaf.FlatLightLaf;
 
+import javax.sound.sampled.*;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
+import java.io.IOException;
 import java.sql.Timestamp;
+
+import java.io.File;
 
 
 public class Hauptfenster extends JFrame implements ActionListener {
     static Database db = new Database();
-
-    JButton loginButton;
-    JPanel sendPanel;
-    JPanel buttonPanel;
-    JLabel anzeige;     // Anzeigeflaeche
-    JButton sendButton;
-    JComboBox cb;
-    DefaultListModel<String> model;
-    JList messageList;
-    JScrollPane scrollPane;
-    JTextField text;
-
+    Clip clip;
+    User usr;
+    AudioInputStream audioInputStream;
+    ////// UI
     JPanel mainPanel;
-    JPanel loginPanel;
-    JPanel registerPanel;
     CardLayout cardLayout;
-    JButton login;
     JPanel startPanel;
+
+    //// Login and Register
+    JTabbedPane tabpane;
+    // Login
+    JPanel loginPanel;
+    JButton loginButton;
     JTextField usernameField;
     JTextField passwordField;
 
+    // Register
+    JPanel registerPanel;
     JTextField registerusernameField;
     JTextField registerpasswordField;
     JButton registerButton;
-    JTabbedPane tabpane;
-    User usr;
+
+    ///// Chat
+    JPanel sendPanel;
+    JPanel buttonPanel;
+    JLabel chatTitle;
+    DefaultListModel<String> model;
+    JList messageList;
+    JScrollPane scrollPane;
+    JTextField sendMessageField;
+    JButton sendButton;
+    JButton login;
+
 
 
     public Hauptfenster() {
+        try {
+            audioInputStream = AudioSystem.getAudioInputStream(new File("./assets/notification.wav").getAbsoluteFile());
+            clip = AudioSystem.getClip();
+            clip.open(audioInputStream);
+        } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
+            throw new RuntimeException(e);
+        }
         db.connect();
         FlatLightLaf.setup();
         createLoginPanel();
@@ -75,7 +93,7 @@ public class Hauptfenster extends JFrame implements ActionListener {
         startPanel.setLayout(new BorderLayout());
 
         loginPanel = new JPanel();
-        startPanel.setLayout(new FlowLayout());
+        startPanel.setLayout(new BorderLayout());
         loginPanel.setLayout(new BoxLayout(loginPanel, BoxLayout.Y_AXIS));
         JPanel userPanel = new JPanel();
         userPanel.setLayout(new BoxLayout(userPanel, BoxLayout.X_AXIS));
@@ -112,7 +130,10 @@ public class Hauptfenster extends JFrame implements ActionListener {
 
         usernameField = new JTextField();
         passwordField = new JTextField();
+
         loginButton = new JButton("Login");
+        loginButton.addActionListener(this);
+
         tabpane.addTab("Login", loginPanel);
         tabpane.addTab("Register", registerPanel);
 
@@ -129,10 +150,7 @@ public class Hauptfenster extends JFrame implements ActionListener {
         loginPanel.add(passwordPanel);
 
         loginPanel.add(loginButton);
-
-        loginButton.addActionListener(this);
-
-
+        
         JLabel disclamer = new JLabel();
         disclamer.setText("<html><p style=\"width:100px\">"+"Achtung! Passwörter werden im Klartext in einer von Administratoren einsehbaren Datenbank abgespeichert! Bitte benutzt keine Passwörter die schon in benutzung sind oder private Informationen beinhalten."+"</p></html>");
         registerPanel.add(registerButton);
@@ -150,10 +168,10 @@ public class Hauptfenster extends JFrame implements ActionListener {
         chatPanel.setLayout(new BoxLayout(chatPanel, BoxLayout.Y_AXIS));
         this.setTitle("Texter");
 
-        anzeige = new JLabel("Texter [all] chat");
-        anzeige.setFont(new Font("helvetica neue", Font.BOLD, 14));
-        anzeige.setMinimumSize(anzeige.getPreferredSize());
-        anzeige.setMaximumSize(anzeige.getPreferredSize());
+        chatTitle = new JLabel("Texter [all] chat");
+        chatTitle.setFont(new Font("helvetica neue", Font.BOLD, 14));
+        chatTitle.setMinimumSize(chatTitle.getPreferredSize());
+        chatTitle.setMaximumSize(chatTitle.getPreferredSize());
 
         model = new DefaultListModel<>();
         messageList = new JList(model);
@@ -183,18 +201,18 @@ public class Hauptfenster extends JFrame implements ActionListener {
 
         buttonPanel.add(sendButton);
 
-        text = new JTextField();
+        sendMessageField = new JTextField();
 
-        text.setPreferredSize(new Dimension(700, 30));
-        text.setMinimumSize(new Dimension(100, 30));
-        text.setMaximumSize(new Dimension(999999999, 30));
+        sendMessageField.setPreferredSize(new Dimension(700, 30));
+        sendMessageField.setMinimumSize(new Dimension(100, 30));
+        sendMessageField.setMaximumSize(new Dimension(999999999, 30));
 
 
-        chatPanel.add(anzeige);
+        chatPanel.add(chatTitle);
         //this.add(messageList);
         chatPanel.add(scrollPane);
         scrollPane.setViewportView(messageList);
-        sendPanel.add(text);
+        sendPanel.add(sendMessageField);
         sendPanel.add(buttonPanel);
         chatPanel.add(sendPanel);
         chatPanel.add(login);
@@ -215,6 +233,8 @@ public class Hauptfenster extends JFrame implements ActionListener {
 
     void refreshList() {
         if(db.checkNewMessage()) {
+            bing();
+            System.out.println("bing");
             model.clear();
             db.getMessages("chat");
             for(int i = db.messagesLoaded; i <= db.messages.size() - 1; i++) {
@@ -225,10 +245,16 @@ public class Hauptfenster extends JFrame implements ActionListener {
         }
     }
 
+    private void bing() {
+        clip.stop();
+        clip.setMicrosecondPosition(0);
+        clip.start();
+    }
+
     public void actionPerformed(ActionEvent origin) {
         if(origin.getSource() == this.sendButton) {
-            db.sendMessage(new Message(new Timestamp(System.currentTimeMillis()), usr.username, text.getText(), false));
-            text.setText("");
+            db.sendMessage(new Message(new Timestamp(System.currentTimeMillis()), usr.username, sendMessageField.getText(), false));
+            sendMessageField.setText("");
             refreshList();
         } else if(origin.getSource() == this.login) {
             cardLayout.show(mainPanel, "login");
